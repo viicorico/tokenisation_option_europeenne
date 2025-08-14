@@ -11,7 +11,6 @@ contract EuropeanOption is ERC721URIStorage
     OptionType public optionType;
     
     address payable public issuer;
-    address payable public holder;
 
     uint public premium;
     uint public strikePrice;
@@ -22,9 +21,9 @@ contract EuropeanOption is ERC721URIStorage
     bool public priceFinalized;
     bool public minted;
 
-    event Bought(address indexed holder, uint premium);
+    event Bought(address indexed buyer, uint premium);
     event PriceSet(uint price);
-    event Exercised(address indexed holder, uint payout);
+    event Exercised(address indexed buyer, uint payout);
     event Expired();
     event CollateralFunded(address indexed by, uint amount);
 
@@ -44,7 +43,7 @@ contract EuropeanOption is ERC721URIStorage
  // modifier
 
     modifier onlyHolder() {
-        require (msg.sender == holder, "Only holder can exercise");
+        require (msg.sender == ownerOf(OPTION_ID), "Only holder can exercise");
         _;
     }
 
@@ -59,7 +58,7 @@ contract EuropeanOption is ERC721URIStorage
     }
 
     modifier onlyIfNotBought() {
-        require(holder == address(0), "Option already bought");
+        require(!minted, "Option already bought");
         _;
     }
 
@@ -107,7 +106,6 @@ contract EuropeanOption is ERC721URIStorage
         require(msg.value == premium, "Send exact premium");
         minted = true;
         _mint(msg.sender, OPTION_ID);
-        holder = payable(msg.sender);
         issuer.transfer(msg.value); 
         emit Bought(msg.sender, msg.value);
 
@@ -120,9 +118,9 @@ contract EuropeanOption is ERC721URIStorage
         require(address(this).balance >= payout, "Insufficient collateral");
         isActive = false;
         _burn(OPTION_ID);
-        holder.transfer(payout);
-        isActive = false;
-        emit Exercised(holder, payout);
+        payable(msg.sender).transfer(payout);
+        emit Exercised(msg.sender, payout);
+        
     }
 
    
